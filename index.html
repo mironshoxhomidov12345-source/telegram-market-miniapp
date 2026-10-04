@@ -29,7 +29,7 @@
       background-color: var(--bg-color);
       color: var(--text-main);
       padding: 12px;
-      padding-bottom: 30px;
+      padding-bottom: 40px;
     }
 
     header {
@@ -77,7 +77,7 @@
 
     .image-container {
       width: 100%;
-      height: 220px;
+      height: 240px;
       background-color: #020617;
       position: relative;
     }
@@ -120,7 +120,7 @@
     }
 
     .price {
-      font-size: 19px;
+      font-size: 20px;
       font-weight: 800;
       color: var(--price-color);
     }
@@ -150,14 +150,15 @@
     .btn-contact {
       background-color: var(--accent);
       color: white;
-      text-decoration: none;
+      border: none;
       padding: 12px;
       border-radius: 10px;
       text-align: center;
       font-weight: 600;
       font-size: 14px;
+      cursor: pointer;
       margin-top: 4px;
-      transition: background 0.2s;
+      width: 100%;
     }
 
     .btn-contact:active {
@@ -189,12 +190,39 @@
       tg.expand();
     }
 
-    const API_URL = "https://telegram-bot-mwh4.onrender.com/api/listings";
+    const BACKEND_BASE = "https://telegram-bot-mwh4.onrender.com";
     let allListings = [];
+
+    function contactSeller(contact) {
+      if (!contact) {
+        if (tg && tg.openTelegramLink) {
+          tg.openTelegramLink("https://t.me/TELEFONBOZOROZBEKISTONBOT");
+        } else {
+          window.open("https://t.me/TELEFONBOZOROZBEKISTONBOT", "_blank");
+        }
+        return;
+      }
+
+      const clean = contact.replace('@', '').replace('+', '').trim();
+      let url = "";
+
+      // Если указан телефон или юзернейм
+      if (/^\d+$/.test(clean)) {
+        url = `https://t.me/+${clean}`;
+      } else {
+        url = `https://t.me/${clean}`;
+      }
+
+      if (tg && tg.openTelegramLink) {
+        tg.openTelegramLink(url);
+      } else {
+        window.open(url, "_blank");
+      }
+    }
 
     async function loadListings() {
       try {
-        const res = await fetch(API_URL);
+        const res = await fetch(`${BACKEND_BASE}/api/listings`);
         const data = await res.json();
         allListings = data;
         renderListings(allListings);
@@ -203,7 +231,6 @@
         document.getElementById("listingsContainer").innerHTML = `
           <div class="empty-state">
             <p>E'lonlarni yuklashda xatolik yuz berdi.</p>
-            <p style="font-size: 12px; margin-top: 6px; opacity: 0.7;">Baza bilan aloqa tekshirilmoqda...</p>
           </div>
         `;
       }
@@ -217,16 +244,20 @@
       }
 
       container.innerHTML = items.map(item => {
-        const contactLink = item.contact 
-          ? `https://t.me/${item.contact.replace('@', '')}` 
-          : "https://t.me/TELEFONBOZOROZBEKISTONBOT";
+        let photo = item.photo_url || "";
+        if (photo.startsWith("/api/")) {
+          photo = `${BACKEND_BASE}${photo}`;
+        }
+        if (!photo) {
+          photo = "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=600&auto=format&fit=crop&q=80";
+        }
 
-        const photo = item.photo_url || "https://images.unsplash.com/photo-1632661674596-df8be070a5c5?w=600&auto=format&fit=crop&q=80";
+        const safeContact = (item.contact || "").replace(/"/g, '&quot;');
 
         return `
           <div class="card">
             <div class="image-container">
-              <img src="${photo}" alt="${item.model}" onerror="this.src='https://images.unsplash.com/photo-1632661674596-df8be070a5c5?w=600&auto=format&fit=crop&q=80'">
+              <img src="${photo}" alt="${item.model}">
               <div class="city-badge">📍 ${item.city || 'Toshkent'}</div>
             </div>
             <div class="card-body">
@@ -242,7 +273,7 @@
                 <span class="badge">${item.has_box ? '📦 Karobka bor' : '❌ Karobkasiz'}</span>
                 <span class="badge">⚙️ ${item.repairs}</span>
               </div>
-              <a href="${contactLink}" target="_blank" class="btn-contact">Sotuvchiga yozish →</a>
+              <button onclick="contactSeller('${safeContact}')" class="btn-contact">Sotuvchiga yozish →</button>
             </div>
           </div>
         `;
@@ -263,3 +294,4 @@
   </script>
 </body>
 </html>
+
